@@ -1,0 +1,11 @@
+{{- if .Values.odooConf }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "odoo.fullname" . }}-conf
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+data:
+  odoo.conf: |
+    {{- .Values.odooConf | nindent 4 }}
+{{- end }}

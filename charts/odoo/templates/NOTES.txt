@@ -1,0 +1,47 @@
+Thank you for installing {{ .Chart.Name }} ({{ include "odoo.image" . }}).
+
+Release name: {{ .Release.Name }}
+Namespace:    {{ .Release.Namespace }}
+
+1. Wait for the Odoo pod to become ready:
+
+   kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "odoo.fullname" . }}
+
+2. Reach Odoo:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else if eq .Values.service.type "LoadBalancer" }}
+   Get the external IP (may take a moment to provision):
+
+   kubectl -n {{ .Release.Namespace }} get svc {{ include "odoo.fullname" . }} -w
+{{- else }}
+   Port-forward to your machine:
+
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "odoo.fullname" . }} 8069:{{ .Values.service.httpPort }}
+
+   Then open http://127.0.0.1:8069
+{{- end }}
+
+3. The database master password is in the Secret:
+
+   kubectl -n {{ .Release.Namespace }} get secret {{ include "odoo.adminSecretName" . }} \
+     -o jsonpath="{.data.{{ include "odoo.adminSecretKey" . }}}" | base64 -d; echo
+
+{{- if .Values.postgresql.enabled }}
+
+NOTE: You are using the bundled PostgreSQL subchart. For production, set
+postgresql.enabled=false and point database.* at a managed PostgreSQL instance.
+{{- end }}
+{{- if and .Values.ingress.enabled (not .Values.odoo.proxyMode) }}
+
+WARNING: ingress is enabled but odoo.proxyMode is false. Set odoo.proxyMode=true
+so Odoo trusts the X-Forwarded-* headers from your ingress controller.
+{{- end }}
+{{- if and .Values.ingress.enabled (not .Values.ingress.longpolling.enabled) }}
+
+NOTE: Live chat / websockets need traffic routed to the gevent port. Enable
+ingress.longpolling.enabled=true (or otherwise route /websocket to port
+{{ .Values.service.longpollingPort }}) for those features to work behind the ingress.
+{{- end }}

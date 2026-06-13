@@ -1,0 +1,30 @@
+# Claude Code
+.claude/
+CLAUDE.local.md
+.claude.json
+settings.local.json
+
+# Helm
+# Packaged charts
+*.tgz
+# Vendored subchart dependencies (re-fetched with `helm dependency build`)
+**/charts/*.tgz
+# Local install/test output
+*.orig
+*.bak
+
+# Local values overrides (may contain secrets)
+values.local.yaml
+*.values.local.yaml
+secrets.yaml
+*.secret.yaml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*~

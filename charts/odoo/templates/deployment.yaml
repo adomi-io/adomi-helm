@@ -1,0 +1,164 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "odoo.fullname" . }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  # Filestore is a RWO volume; recreate avoids two pods racing for the mount.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "odoo.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.odooConf }}
+        checksum/config: {{ .Values.odooConf | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "odoo.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "odoo.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: odoo
+          image: {{ include "odoo.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 8069
+              protocol: TCP
+            - name: longpolling
+              containerPort: 8072
+              protocol: TCP
+          env:
+            - name: ODOO_DB_HOST
+              value: {{ include "odoo.databaseHost" . | quote }}
+            - name: ODOO_DB_PORT
+              value: {{ .Values.database.port | quote }}
+            - name: ODOO_DB_USER
+              value: {{ .Values.database.user | quote }}
+            - name: ODOO_DB_NAME
+              value: {{ .Values.database.name | quote }}
+            - name: ODOO_DB_SSLMODE
+              value: {{ .Values.database.sslmode | quote }}
+            - name: ODOO_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odoo.databaseSecretName" . }}
+                  key: {{ include "odoo.databaseSecretKey" . }}
+            - name: ODOO_ADMIN_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odoo.adminSecretName" . }}
+                  key: {{ include "odoo.adminSecretKey" . }}
+            - name: ODOO_WORKERS
+              value: {{ .Values.odoo.workers | quote }}
+            - name: ODOO_PROXY_MODE
+              value: {{ ternary "True" "False" .Values.odoo.proxyMode | quote }}
+            - name: ODOO_LIST_DB
+              value: {{ ternary "True" "False" .Values.odoo.listDb | quote }}
+            - name: ODOO_WITHOUT_DEMO
+              value: {{ ternary "True" "False" .Values.odoo.withoutDemo | quote }}
+            - name: ODOO_LOG_LEVEL
+              value: {{ .Values.odoo.logLevel | quote }}
+            {{- if .Values.odoo.loadLanguage }}
+            - name: ODOO_LOAD_LANGUAGE
+              value: {{ .Values.odoo.loadLanguage | quote }}
+            {{- end }}
+            {{- if .Values.odoo.initModules }}
+            - name: ODOO_INIT
+              value: {{ .Values.odoo.initModules | quote }}
+            {{- end }}
+            {{- if .Values.odoo.updateModules }}
+            - name: ODOO_UPDATE
+              value: {{ .Values.odoo.updateModules | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+            {{- if .Values.odooConf }}
+            - name: odoo-conf
+              mountPath: /volumes/config/odoo.conf
+              subPath: odoo.conf
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "odoo.pvcName" . }}
+        {{- end }}
+        {{- if .Values.odooConf }}
+        - name: odoo-conf
+          configMap:
+            name: {{ include "odoo.fullname" . }}-conf
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

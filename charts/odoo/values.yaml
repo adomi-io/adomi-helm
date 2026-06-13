@@ -1,0 +1,234 @@
+# Default values for the Odoo Helm chart.
+# This deploys ghcr.io/adomi-io/odoo, which is configured entirely through
+# ODOO_* environment variables (see https://github.com/adomi-io/odoo).
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/adomi-io/odoo
+  # Defaults to the chart's appVersion (the Odoo major line) when left empty.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# The image runs as the non-root "ubuntu" user (uid/gid 1000). fsGroup ensures
+# the persistent filestore volume is writable by that user.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  # Odoo writes to /volumes and /tmp, so the root filesystem cannot be read-only.
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  httpPort: 8069
+  # gevent port used for websockets / live chat / the bus (longpolling).
+  longpollingPort: 8072
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "720"
+  hosts:
+    - host: odoo.local
+      paths:
+        - path: /
+          pathType: Prefix
+  # When enabled, the listed paths are routed to the gevent (longpolling) port
+  # instead of the HTTP port. Required for live chat / websockets to work behind
+  # most ingress controllers.
+  longpolling:
+    enabled: false
+    paths:
+      - /websocket
+      - /longpolling
+  tls: []
+    # - secretName: odoo-tls
+    #   hosts:
+    #     - odoo.local
+
+resources: {}
+  # limits:
+  #   cpu: "2"
+  #   memory: 4Gi
+  # requests:
+  #   cpu: 500m
+  #   memory: 1Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Odoo filestore, sessions and outgoing-mail queue live under ODOO_DATA_DIR
+# (/volumes/data). Persist it so they survive pod restarts.
+# NOTE: the default ReadWriteOnce access mode supports a single replica only.
+# For replicaCount > 1 you need a ReadWriteMany storage class.
+persistence:
+  enabled: true
+  mountPath: /volumes/data
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  existingClaim: ""
+  annotations: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+# Health probes hit Odoo's built-in /web/health endpoint.
+livenessProbe:
+  httpGet:
+    path: /web/health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 6
+readinessProbe:
+  httpGet:
+    path: /web/health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+# First boot / module initialisation can be slow; the startup probe gives Odoo
+# room before liveness/readiness take over.
+startupProbe:
+  httpGet:
+    path: /web/health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+# Odoo master/admin password (used to create & manage databases). Stored in a
+# Secret. Set existingSecret to source it from your own Secret instead.
+adminPassword:
+  value: "admin"
+  existingSecret: ""
+  existingSecretKey: admin-password
+
+database:
+  # Leave host empty to use the bundled PostgreSQL subchart below
+  # (postgresql.enabled=true). Set it to point at an external database.
+  host: ""
+  port: 5432
+  name: odoo
+  user: odoo
+  password: odoo
+  sslmode: prefer
+  # Source the DB password from an existing Secret instead of database.password.
+  existingSecret: ""
+  existingSecretKey: db-password
+
+odoo:
+  # Worker processes. 0 = threaded (single-process) mode; >0 enables the
+  # prefork multiprocessing server (recommended for production).
+  workers: 0
+  # Trust X-Forwarded-* headers from the ingress/reverse proxy. Recommended
+  # whenever ingress.enabled=true.
+  proxyMode: false
+  # Allow listing / creating databases from the web UI. Disable in production.
+  listDb: true
+  logLevel: info
+  # Skip loading Odoo demo data on database creation.
+  withoutDemo: true
+  loadLanguage: ""
+  # Comma-separated modules to initialise on startup (ODOO_INIT). Take care when
+  # replicaCount > 1, as every replica would attempt it.
+  initModules: ""
+  # Comma-separated modules to update on startup (ODOO_UPDATE).
+  updateModules: ""
+
+# Additional raw environment variables (e.g. extra ODOO_* settings or secrets).
+extraEnv: []
+  # - name: ODOO_LIMIT_TIME_CPU
+  #   value: "120"
+  # - name: ODOO_SMTP_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: smtp-credentials
+  #       key: password
+
+# Inject env vars in bulk from existing ConfigMaps / Secrets.
+extraEnvFrom: []
+  # - secretRef:
+  #     name: odoo-extra-env
+
+# Optionally override the odoo.conf template (mounted at /volumes/config/odoo.conf).
+# The image runs envsubst over it at startup, so ${ODOO_*} placeholders work.
+# Leave empty to use the image's built-in config.
+odooConf: ""
+
+extraVolumes: []
+  # - name: extra-addons
+  #   persistentVolumeClaim:
+  #     claimName: my-addons
+extraVolumeMounts: []
+  # - name: extra-addons
+  #   mountPath: /volumes/extra_addons
+
+# Bundled PostgreSQL. Set enabled=false and configure the database.* values to
+# use an external database (RDS, Cloud SQL, etc.). When enabled, the bundled
+# server is seeded from the database.* values above, so there's nothing to keep
+# in sync.
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16"
+    pullPolicy: IfNotPresent
+  # postgres runs as uid/gid 999 on the Debian image variants.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 8Gi
+  resources: {}
+    # requests:
+    #   cpu: 250m
+    #   memory: 256Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
