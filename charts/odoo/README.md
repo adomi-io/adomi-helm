@@ -319,6 +319,22 @@ The values you'll reach for most often:
 
 For everything else, the [`values.yaml`](./values.yaml) is commented end to end.
 
+# Example values
+
+Ready-to-use value files for the common setups live in [`examples/`](./examples). Install with `-f`:
+
+```bash
+helm install odoo ./charts/odoo -f charts/odoo/examples/production-values.yaml
+```
+
+| File | Setup |
+| --- | --- |
+| [`minimal-values.yaml`](./examples/minimal-values.yaml) | Bundled PostgreSQL, your own image and admin password. |
+| [`ingress-values.yaml`](./examples/ingress-values.yaml) | Behind a Traefik Ingress with websockets and proxy mode. |
+| [`external-database-values.yaml`](./examples/external-database-values.yaml) | External PostgreSQL, passwords from Secrets. |
+| [`existing-secrets-values.yaml`](./examples/existing-secrets-values.yaml) | Bundled PostgreSQL, both passwords from Secrets. |
+| [`production-values.yaml`](./examples/production-values.yaml) | External database, workers, resources, Ingress, sized storage. |
+
 # License
 
 For license details, see the [LICENSE](https://github.com/adomi-io/odoo/blob/master/LICENSE) file in the Odoo repository.

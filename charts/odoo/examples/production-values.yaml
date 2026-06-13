@@ -1,0 +1,67 @@
+# Production-shaped install.
+#
+# External database, multiple workers, resource requests and limits, proxy mode
+# behind an Ingress, the database manager turned off, and a sized filestore
+# volume. Adjust hostnames, Secret names, storage class, and sizes to match your
+# environment.
+#
+#   helm install odoo ./charts/odoo -f examples/production-values.yaml
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/your-org/odoo
+  tag: "19.0"
+
+# Run a managed PostgreSQL in production rather than the bundled pod.
+postgresql:
+  enabled: false
+
+database:
+  host: postgres.example.internal
+  port: 5432
+  name: odoo
+  user: odoo
+  existingSecret: odoo-db
+  existingSecretKey: password
+  sslmode: require
+
+adminPassword:
+  existingSecret: odoo-admin
+  existingSecretKey: admin-password
+
+odoo:
+  workers: 4
+  proxyMode: true
+  listDb: false
+
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+persistence:
+  enabled: true
+  size: 50Gi
+  storageClass: ""   # set to your cluster's storage class
+
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: odoo.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  longpolling:
+    enabled: true
+    paths:
+      - /websocket
+      - /longpolling
+  tls:
+    - secretName: odoo-tls
+      hosts:
+        - odoo.example.com

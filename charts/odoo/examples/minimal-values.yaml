@@ -1,0 +1,13 @@
+# Minimal install.
+#
+# Runs Odoo with the bundled PostgreSQL and just two overrides: your own image
+# and your own admin (master) password. Everything else uses chart defaults.
+#
+#   helm install odoo ./charts/odoo -f examples/minimal-values.yaml
+
+image:
+  repository: ghcr.io/your-org/odoo
+  tag: "19.0"
+
+adminPassword:
+  value: "change-me"

@@ -1,0 +1,28 @@
+# Expose Odoo through an Ingress.
+#
+# Routes websocket/longpolling traffic to the gevent port and turns on proxy
+# mode so Odoo trusts the forwarded headers from the ingress controller.
+#
+#   helm install odoo ./charts/odoo -f examples/ingress-values.yaml
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  hosts:
+    - host: odoo.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  longpolling:
+    enabled: true
+    paths:
+      - /websocket
+      - /longpolling
+  tls:
+    - secretName: odoo-tls
+      hosts:
+        - odoo.example.com
+
+odoo:
+  proxyMode: true

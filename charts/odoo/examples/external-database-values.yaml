@@ -1,0 +1,25 @@
+# Use an external PostgreSQL instead of the bundled one.
+#
+# Passwords come from Secrets you create, so nothing sensitive lives in this
+# file. Create the Secrets first:
+#
+#   kubectl create secret generic odoo-db    --from-literal=password=...
+#   kubectl create secret generic odoo-admin --from-literal=admin-password=...
+#
+#   helm install odoo ./charts/odoo -f examples/external-database-values.yaml
+
+postgresql:
+  enabled: false
+
+database:
+  host: postgres.example.internal
+  port: 5432
+  name: odoo
+  user: odoo
+  existingSecret: odoo-db
+  existingSecretKey: password
+  sslmode: require
+
+adminPassword:
+  existingSecret: odoo-admin
+  existingSecretKey: admin-password
