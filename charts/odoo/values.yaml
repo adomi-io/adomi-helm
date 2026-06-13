@@ -49,8 +49,7 @@ ingress:
   enabled: false
   className: ""
   annotations: {}
-    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    # traefik.ingress.kubernetes.io/router.tls: "true"
+    # Ingress controller annotations go here. Use whatever your controller expects.
   hosts:
     - host: odoo.local
       paths:
@@ -139,7 +138,7 @@ adminPassword:
   existingSecretKey: admin-password
 
 database:
-  # Leave host empty to use the bundled PostgreSQL subchart below
+  # Leave host empty to use the bundled PostgreSQL below
   # (postgresql.enabled=true). Set it to point at an external database.
   host: ""
   port: 5432

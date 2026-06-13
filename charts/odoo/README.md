@@ -330,7 +330,7 @@ helm install odoo ./charts/odoo -f charts/odoo/examples/production-values.yaml
 | File | Setup |
 | --- | --- |
 | [`minimal-values.yaml`](./examples/minimal-values.yaml) | Bundled PostgreSQL, your own image and admin password. |
-| [`ingress-values.yaml`](./examples/ingress-values.yaml) | Behind a Traefik Ingress with websockets and proxy mode. |
+| [`ingress-values.yaml`](./examples/ingress-values.yaml) | Behind an Ingress with websockets and proxy mode. |
 | [`external-database-values.yaml`](./examples/external-database-values.yaml) | External PostgreSQL, passwords from Secrets. |
 | [`existing-secrets-values.yaml`](./examples/existing-secrets-values.yaml) | Bundled PostgreSQL, both passwords from Secrets. |
 | [`production-values.yaml`](./examples/production-values.yaml) | External database, workers, resources, Ingress, sized storage. |
