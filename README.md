@@ -2,7 +2,7 @@
 
 This is the Adomi Helm repository, a collection of Helm charts for deploying Adomi software on Kubernetes.
 
-The charts share the same conventions, so once you've run one you know how to run the rest. Sensible defaults bring a chart up with a single `helm install`, a documented `values.yaml` covers everything else, and the configuration mirrors the images each chart runs.
+The charts follow the same conventions. Sensible defaults bring a chart up with a single `helm install`, a documented `values.yaml` covers everything else, and the configuration mirrors the images each chart runs.
 
 > [!TIP]
 > **Here for the Odoo chart?**
