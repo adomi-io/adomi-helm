@@ -49,8 +49,8 @@ ingress:
   enabled: false
   className: ""
   annotations: {}
-    # nginx.ingress.kubernetes.io/proxy-body-size: "100m"
-    # nginx.ingress.kubernetes.io/proxy-read-timeout: "720"
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # traefik.ingress.kubernetes.io/router.tls: "true"
   hosts:
     - host: odoo.local
       paths:

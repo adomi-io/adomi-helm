@@ -180,7 +180,7 @@ By default the chart creates a `ClusterIP` Service on port `8069`. To put Odoo b
 ```yaml
 ingress:
   enabled: true
-  className: nginx
+  className: traefik
   hosts:
     - host: erp.example.com
       paths:
