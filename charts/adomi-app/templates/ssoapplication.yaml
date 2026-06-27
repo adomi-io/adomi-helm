@@ -1,0 +1,37 @@
+{{- $i := .Values.global.adomiApp | default dict }}
+{{- $sso := $i.sso | default dict }}
+{{- $protocol := $sso.protocol | default "none" }}
+{{- if and ($sso.enabled | default false) (ne $protocol "none") }}
+apiVersion: identity.adomi.io/v1alpha1
+kind: SSOApplication
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "adomiApp.labels" . | nindent 4 }}
+spec:
+  protocol: {{ $protocol }}
+  displayName: {{ $sso.displayName | default .Release.Name | quote }}
+  slug: {{ printf "%s-%s" .Release.Namespace .Release.Name | quote }}
+  {{- with $sso.group }}
+  group: {{ . | quote }}
+  {{- end }}
+  {{- if eq $protocol "proxy" }}
+  proxy:
+    mode: forwardSingle
+    externalHost: {{ required "global.adomiApp.url is required for SSO" $i.url | quote }}
+  {{- else if eq $protocol "oauth2" }}
+  redirectUris:
+    {{- $url := required "global.adomiApp.url is required for SSO" $i.url }}
+    {{- $paths := $sso.redirectPaths | default (list "/oauth-authorized/authentik") }}
+    {{- range $paths }}
+    - {{ printf "%s%s" $url . | quote }}
+    {{- end }}
+  credentials:
+    targetSecret:
+      name: {{ include "adomiApp.oidcSecret" . }}
+  {{- with $sso.scopes }}
+  scopes:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+{{- end }}

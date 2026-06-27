@@ -1,0 +1,39 @@
+# A generic app with a CNPG database and native OIDC (oauth2). The client
+# credentials land in the <release>-oidc Secret; map them to whatever env the app
+# expects via generic.extraEnv.
+# helm template app-acme charts/adomi-app -n acme-prod -f examples/generic-oauth2.yaml
+global:
+  adomiApp:
+    enabled: true
+    type: generic
+    host: app-prod-acme.example.com
+    url: https://app-prod-acme.example.com
+    ingressClassName: traefik
+    database:
+      mode: cnpg
+      storage: 10Gi
+    sso:
+      enabled: true
+      protocol: oauth2
+      group: acme
+      redirectPaths:
+        - /oauth2/callback
+
+generic:
+  enabled: true
+  image:
+    repository: ghcr.io/example/app
+    tag: "1.4.2"
+  service:
+    port: 8080
+  extraEnv:
+    - name: OIDC_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: app-acme-oidc   # <release>-oidc
+          key: client-id
+    - name: OIDC_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: app-acme-oidc
+          key: client-secret

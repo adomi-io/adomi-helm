@@ -1,0 +1,16 @@
+apiVersion: v2
+name: generic
+description: A generic single-container web application chart (image + ingress + optional database) following the Adomi platform values contract
+type: application
+version: 0.1.0
+appVersion: "1.0"
+maintainers:
+  - name: Adomi Software, LLC
+    email: github@adomisoftware.com
+keywords:
+  - generic
+  - webapp
+dependencies:
+  - name: platform-lib
+    version: 0.1.0
+    repository: file://../platform-lib

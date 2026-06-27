@@ -1,0 +1,9 @@
+{{- $i := .Values.global.adomiApp | default dict }}
+Deployed adomi-app "{{ .Release.Name }}" ({{ $i.type }}) in namespace {{ .Release.Namespace }}.
+
+  URL:       {{ $i.url | default (printf "https://%s" $i.host) }}
+  Database:  {{ ($i.database | default dict).mode | default "none" }}{{ if eq (($i.database | default dict).mode | default "none") "cnpg" }} (CNPG cluster {{ include "adomiApp.dbCluster" . }}){{ end }}
+  SSO:       {{ if (($i.sso | default dict).enabled | default false) }}{{ ($i.sso).protocol }}{{ else }}disabled{{ end }}
+
+The workload, its database, and its SSOApplication are reconciled by Argo CD, CNPG,
+and the identity operator respectively. Track rollout via the Argo CD Application.

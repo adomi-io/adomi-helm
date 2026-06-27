@@ -1,6 +1,11 @@
 # Default values for the Odoo Helm chart.
 # This deploys ghcr.io/adomi-io/odoo, which is configured entirely through
 # ODOO_* environment variables (see https://github.com/adomi-io/odoo).
+#
+# This chart follows the Adomi platform contract: provision ("spin it up") and
+# connect ("hook it up") are separate and FULLY explicit — nothing is inferred.
+#   - provision: named lists (databases, sso) -> capability CRs (via platform-lib)
+#   - connect:   the workload reads ONLY env; you wire connections in .Values.env
 
 replicaCount: 1
 
@@ -13,6 +18,81 @@ image:
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+
+# Identity stamped onto the capability CRs this chart emits (the Database
+# reconciler requires platform.adomi.io/client). Filled by the controller.
+platform:
+  client: ""
+
+# --- PROVISION (spin it up) -------------------------------------------------
+# Each entry emits a capability CR. The controller fulfils it and delivers
+# credentials to the Secret you name here; reference that Secret from .Values.env.
+databases: []
+  # - name: main
+  #   server: acme-prod-db        # DatabaseServer to create it on
+  #   databaseName: main          # defaults to name
+  #   user: main                  # defaults to name
+  #   credentials:
+  #     secret: odoo-main-db      # password delivered here (this namespace)
+  #     # openbaoPath: secret/acme/odoo/main   # optional explicit OpenBao path
+  #     # passwordKey: password
+
+sso: []
+  # - name: web
+  #   protocol: oauth2            # oauth2 | proxy
+  #   redirectUris:
+  #     - https://odoo.example.com/oauth-authorized/authentik
+  #   credentials:
+  #     secret: odoo-oidc         # client-id/client-secret delivered here
+
+# --- CONNECT (hook it up) ---------------------------------------------------
+# Explicit env for the workload. The DB connection + admin password live here,
+# referencing the Secrets the provision side delivered. Nothing is inferred.
+env: []
+  # - name: ODOO_DB_HOST
+  #   value: main-rw.acme-prod.svc.cluster.local
+  # - name: ODOO_DB_PORT
+  #   value: "5432"
+  # - name: ODOO_DB_USER
+  #   value: main
+  # - name: ODOO_DB_NAME
+  #   value: main
+  # - name: ODOO_DB_SSLMODE
+  #   value: require
+  # - name: ODOO_DB_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef: { name: odoo-main-db, key: password }
+  # - name: ODOO_ADMIN_PASSWD
+  #   valueFrom:
+  #     secretKeyRef: { name: odoo-admin, key: admin-password }
+
+# Inject env vars in bulk from existing ConfigMaps / Secrets.
+extraEnvFrom: []
+  # - secretRef:
+  #     name: odoo-extra-env
+
+# Odoo application configuration (not connection wiring) -> ODOO_* env.
+odoo:
+  # Worker processes. 0 = threaded (single-process) mode; >0 enables the
+  # prefork multiprocessing server (recommended for production).
+  workers: 0
+  # Trust X-Forwarded-* headers from the ingress/reverse proxy. Recommended
+  # whenever ingress.enabled=true.
+  proxyMode: false
+  # Allow listing / creating databases from the web UI. Disable in production.
+  listDb: true
+  logLevel: info
+  # Skip loading Odoo demo data on database creation.
+  withoutDemo: true
+  loadLanguage: ""
+  # Comma-separated modules to initialise on startup (ODOO_INIT).
+  initModules: ""
+  # Comma-separated modules to update on startup (ODOO_UPDATE).
+  updateModules: ""
+
+# Optionally override the odoo.conf template (mounted at /volumes/config/odoo.conf).
+# The image runs envsubst over it at startup, so ${ODOO_*} placeholders work.
+odooConf: ""
 
 serviceAccount:
   create: true
@@ -49,44 +129,30 @@ ingress:
   enabled: false
   className: ""
   annotations: {}
-    # Ingress controller annotations go here. Use whatever your controller expects.
   hosts:
     - host: odoo.local
       paths:
         - path: /
           pathType: Prefix
   # When enabled, the listed paths are routed to the gevent (longpolling) port
-  # instead of the HTTP port. Required for live chat / websockets to work behind
-  # most ingress controllers.
+  # instead of the HTTP port. Required for live chat / websockets behind ingress.
   longpolling:
     enabled: false
     paths:
       - /websocket
       - /longpolling
   tls: []
-    # - secretName: odoo-tls
-    #   hosts:
-    #     - odoo.local
 
 resources: {}
-  # limits:
-  #   cpu: "2"
-  #   memory: 4Gi
-  # requests:
-  #   cpu: 500m
-  #   memory: 1Gi
 
 autoscaling:
   enabled: false
   minReplicas: 1
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
 
 # Odoo filestore, sessions and outgoing-mail queue live under ODOO_DATA_DIR
 # (/volumes/data). Persist it so they survive pod restarts.
-# NOTE: the default ReadWriteOnce access mode supports a single replica only.
-# For replicaCount > 1 you need a ReadWriteMany storage class.
 persistence:
   enabled: true
   mountPath: /volumes/data
@@ -130,104 +196,5 @@ startupProbe:
   timeoutSeconds: 5
   failureThreshold: 30
 
-# Odoo master/admin password (used to create & manage databases). Stored in a
-# Secret. Set existingSecret to source it from your own Secret instead.
-adminPassword:
-  value: "admin"
-  existingSecret: ""
-  existingSecretKey: admin-password
-
-database:
-  # Leave host empty to use the bundled PostgreSQL below
-  # (postgresql.enabled=true). Set it to point at an external database.
-  host: ""
-  port: 5432
-  name: odoo
-  user: odoo
-  password: odoo
-  sslmode: prefer
-  # Source the DB password from an existing Secret instead of database.password.
-  existingSecret: ""
-  existingSecretKey: db-password
-
-odoo:
-  # Worker processes. 0 = threaded (single-process) mode; >0 enables the
-  # prefork multiprocessing server (recommended for production).
-  workers: 0
-  # Trust X-Forwarded-* headers from the ingress/reverse proxy. Recommended
-  # whenever ingress.enabled=true.
-  proxyMode: false
-  # Allow listing / creating databases from the web UI. Disable in production.
-  listDb: true
-  logLevel: info
-  # Skip loading Odoo demo data on database creation.
-  withoutDemo: true
-  loadLanguage: ""
-  # Comma-separated modules to initialise on startup (ODOO_INIT). Take care when
-  # replicaCount > 1, as every replica would attempt it.
-  initModules: ""
-  # Comma-separated modules to update on startup (ODOO_UPDATE).
-  updateModules: ""
-
-# Additional raw environment variables (e.g. extra ODOO_* settings or secrets).
-extraEnv: []
-  # - name: ODOO_LIMIT_TIME_CPU
-  #   value: "120"
-  # - name: ODOO_SMTP_PASSWORD
-  #   valueFrom:
-  #     secretKeyRef:
-  #       name: smtp-credentials
-  #       key: password
-
-# Inject env vars in bulk from existing ConfigMaps / Secrets.
-extraEnvFrom: []
-  # - secretRef:
-  #     name: odoo-extra-env
-
-# Optionally override the odoo.conf template (mounted at /volumes/config/odoo.conf).
-# The image runs envsubst over it at startup, so ${ODOO_*} placeholders work.
-# Leave empty to use the image's built-in config.
-odooConf: ""
-
 extraVolumes: []
-  # - name: extra-addons
-  #   persistentVolumeClaim:
-  #     claimName: my-addons
 extraVolumeMounts: []
-  # - name: extra-addons
-  #   mountPath: /volumes/extra_addons
-
-# Bundled PostgreSQL. Set enabled=false and configure the database.* values to
-# use an external database (RDS, Cloud SQL, etc.). When enabled, the bundled
-# server is seeded from the database.* values above, so there's nothing to keep
-# in sync.
-postgresql:
-  enabled: true
-  image:
-    repository: postgres
-    tag: "16"
-    pullPolicy: IfNotPresent
-  # postgres runs as uid/gid 999 on the Debian image variants.
-  podSecurityContext:
-    runAsNonRoot: true
-    runAsUser: 999
-    runAsGroup: 999
-    fsGroup: 999
-  securityContext:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-  persistence:
-    enabled: true
-    storageClass: ""
-    accessModes:
-      - ReadWriteOnce
-    size: 8Gi
-  resources: {}
-    # requests:
-    #   cpu: 250m
-    #   memory: 256Mi
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}

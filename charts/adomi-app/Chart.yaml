@@ -1,0 +1,30 @@
+apiVersion: v2
+name: adomi-app
+description: >-
+  Umbrella chart that turns a small per-app "intent" into a running platform app:
+  the app workload (odoo / mailpit / generic) plus its CloudNativePG database and
+  Authentik SSOApplication, wired together by convention. The declarative
+  replacement for the platform controller's resolve/apptypes/cnpg/sso Python.
+type: application
+version: 0.1.0
+appVersion: "1.0"
+maintainers:
+  - name: Adomi Software, LLC
+    email: github@adomisoftware.com
+keywords:
+  - adomi
+  - platform
+  - gitops
+dependencies:
+  - name: odoo
+    version: ">=0.1.0"
+    repository: file://../odoo
+    condition: odoo.enabled
+  - name: mailpit
+    version: ">=0.1.0"
+    repository: file://../mailpit
+    condition: mailpit.enabled
+  - name: generic
+    version: ">=0.1.0"
+    repository: file://../generic
+    condition: generic.enabled

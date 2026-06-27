@@ -1,0 +1,25 @@
+{{- include "adomiApp.validate" . -}}
+{{- $i := .Values.global.adomiApp | default dict }}
+{{- $db := $i.database | default dict }}
+{{- if eq ($db.mode | default "none") "cnpg" }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "adomiApp.dbCluster" . }}
+  labels:
+    {{- include "adomiApp.labels" . | nindent 4 }}
+spec:
+  instances: {{ $db.instances | default 1 }}
+  {{- with $db.imageName }}
+  imageName: {{ . }}
+  {{- end }}
+  storage:
+    size: {{ $db.storage | default "10Gi" | quote }}
+    {{- with $db.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+  bootstrap:
+    initdb:
+      database: {{ $db.name | default "app" }}
+      owner: {{ $db.user | default "app" }}
+{{- end }}

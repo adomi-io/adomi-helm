@@ -1,14 +1,10 @@
-{{/*
-Expand the name of the chart.
-*/}}
-{{- define "odoo.name" -}}
+{{/* Expand the name of the chart. */}}
+{{- define "generic.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{/*
-Create a default fully qualified app name.
-*/}}
-{{- define "odoo.fullname" -}}
+{{/* Fully qualified app name. */}}
+{{- define "generic.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -21,59 +17,34 @@ Create a default fully qualified app name.
 {{- end }}
 {{- end }}
 
-{{/*
-Create chart name and version as used by the chart label.
-*/}}
-{{- define "odoo.chart" -}}
+{{- define "generic.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
-{{/*
-Common labels
-*/}}
-{{- define "odoo.labels" -}}
-helm.sh/chart: {{ include "odoo.chart" . }}
-{{ include "odoo.selectorLabels" . }}
+{{- define "generic.labels" -}}
+helm.sh/chart: {{ include "generic.chart" . }}
+{{ include "generic.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
-{{/*
-Selector labels
-*/}}
-{{- define "odoo.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "odoo.name" . }}
+{{- define "generic.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "generic.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/*
-Service account name
-*/}}
-{{- define "odoo.serviceAccountName" -}}
+{{- define "generic.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "odoo.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "generic.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
-{{/*
-Image reference (tag defaults to the chart appVersion).
-*/}}
-{{- define "odoo.image" -}}
+{{/* Image reference (tag defaults to the chart appVersion). */}}
+{{- define "generic.image" -}}
 {{- $tag := default .Chart.AppVersion .Values.image.tag -}}
 {{- printf "%s:%s" .Values.image.repository $tag -}}
-{{- end }}
-
-{{/*
-Name of the PVC used for the Odoo filestore.
-*/}}
-{{- define "odoo.pvcName" -}}
-{{- if .Values.persistence.existingClaim -}}
-{{- .Values.persistence.existingClaim -}}
-{{- else -}}
-{{- printf "%s-data" (include "odoo.fullname" .) -}}
-{{- end -}}
 {{- end }}

@@ -1,0 +1,19 @@
+# A Mailpit dev mail-trap (no database) behind forward-auth SSO.
+# helm template mail-acme charts/adomi-app -n acme-dev -f examples/mailpit-dev.yaml
+global:
+  adomiApp:
+    enabled: true
+    type: mailpit
+    host: mail-dev-acme.example.com
+    url: https://mail-dev-acme.example.com
+    ingressClassName: traefik
+    database:
+      mode: none
+    sso:
+      enabled: true
+      protocol: proxy
+      group: acme
+      forwardAuthMiddleware: identity-forward-auth@kubernetescrd
+
+mailpit:
+  enabled: true

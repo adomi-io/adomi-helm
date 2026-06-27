@@ -40,7 +40,7 @@ spec:
             - name: smtp
               containerPort: 1025
               protocol: TCP
-          {{- with .Values.extraEnv }}
+          {{- with .Values.env }}
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}

@@ -53,27 +53,10 @@ spec:
             - name: longpolling
               containerPort: 8072
               protocol: TCP
+          # Connection ("hook it up") is fully explicit: the controller/author supplies
+          # ODOO_DB_* + ODOO_ADMIN_PASSWD via .Values.env, referencing the Secret that
+          # the Database CR (provision side) delivered. Nothing is inferred here.
           env:
-            - name: ODOO_DB_HOST
-              value: {{ include "odoo.databaseHost" . | quote }}
-            - name: ODOO_DB_PORT
-              value: {{ .Values.database.port | quote }}
-            - name: ODOO_DB_USER
-              value: {{ .Values.database.user | quote }}
-            - name: ODOO_DB_NAME
-              value: {{ .Values.database.name | quote }}
-            - name: ODOO_DB_SSLMODE
-              value: {{ .Values.database.sslmode | quote }}
-            - name: ODOO_DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "odoo.databaseSecretName" . }}
-                  key: {{ include "odoo.databaseSecretKey" . }}
-            - name: ODOO_ADMIN_PASSWD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "odoo.adminSecretName" . }}
-                  key: {{ include "odoo.adminSecretKey" . }}
             - name: ODOO_WORKERS
               value: {{ .Values.odoo.workers | quote }}
             - name: ODOO_PROXY_MODE
@@ -96,7 +79,7 @@ spec:
             - name: ODOO_UPDATE
               value: {{ .Values.odoo.updateModules | quote }}
             {{- end }}
-            {{- with .Values.extraEnv }}
+            {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
           {{- with .Values.extraEnvFrom }}

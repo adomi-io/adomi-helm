@@ -1,0 +1,12 @@
+dependencies:
+- name: odoo
+  repository: file://../odoo
+  version: 0.1.0
+- name: mailpit
+  repository: file://../mailpit
+  version: 0.1.0
+- name: generic
+  repository: file://../generic
+  version: 0.1.0
+digest: sha256:1de4f88dcbbc4a6a18fc5a753baa797a327a06a68d17fb1631fd5a40ae0a60f1
+generated: "2026-06-16T19:04:57.857328864-04:00"

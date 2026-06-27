@@ -24,16 +24,10 @@ Namespace:    {{ .Release.Namespace }}
    Then open http://127.0.0.1:8069
 {{- end }}
 
-3. The database master password is in the Secret:
+3. This chart is a pure consumer: the database connection and admin password are
+   supplied explicitly via .Values.env (referencing Secrets). Databases/SSO are
+   provisioned separately from .Values.databases / .Values.sso (capability CRs).
 
-   kubectl -n {{ .Release.Namespace }} get secret {{ include "odoo.adminSecretName" . }} \
-     -o jsonpath="{.data.{{ include "odoo.adminSecretKey" . }}}" | base64 -d; echo
-
-{{- if .Values.postgresql.enabled }}
-
-NOTE: You are using the bundled PostgreSQL subchart. For production, set
-postgresql.enabled=false and point database.* at a managed PostgreSQL instance.
-{{- end }}
 {{- if and .Values.ingress.enabled (not .Values.odoo.proxyMode) }}
 
 WARNING: ingress is enabled but odoo.proxyMode is false. Set odoo.proxyMode=true

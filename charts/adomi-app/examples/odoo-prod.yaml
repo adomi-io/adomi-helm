@@ -1,0 +1,31 @@
+# An Odoo app with a CloudNativePG database and forward-auth SSO.
+# helm template odoo-acme charts/adomi-app -n acme-prod -f examples/odoo-prod.yaml
+global:
+  adomiApp:
+    enabled: true
+    type: odoo
+    host: erp-prod-acme.example.com
+    url: https://erp-prod-acme.example.com
+    ingressClassName: traefik
+    tls:
+      - secretName: wildcard-example-tls
+        hosts: ["*.example.com"]
+    database:
+      mode: cnpg
+      instances: 2
+      storage: 20Gi
+    sso:
+      enabled: true
+      protocol: proxy
+      group: acme
+      forwardAuthMiddleware: identity-forward-auth@kubernetescrd
+
+odoo:
+  enabled: true
+  image:
+    repository: ghcr.io/adomi-io/odoo
+    tag: "19.0"
+  odoo:
+    proxyMode: true
+    listDb: false
+    workers: 2

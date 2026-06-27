@@ -14,6 +14,14 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# Identity stamped onto the capability CRs this chart emits.
+platform:
+  client: ""
+
+# PROVISION — named lists -> capability CRs (mailpit typically needs only sso).
+databases: []
+sso: []
+
 podAnnotations: {}
 podLabels: {}
 
@@ -54,8 +62,8 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# Extra raw environment variables (e.g. MP_* settings).
-extraEnv: []
+# CONNECT — explicit env for the workload (MP_* settings, etc.).
+env: []
 
 livenessProbe:
   httpGet:

@@ -1,0 +1,90 @@
+# adomi-app — one application's intent, mapped to a workload + database + SSO.
+#
+# `global.adomiApp` is the intent. It is shared with the app subcharts (Helm merges
+# `global` into every subchart) so the database, ingress host, and SSO wire up by
+# convention on the release name — no value duplication. The umbrella's own
+# templates (CNPG Cluster, SSOApplication) read the same block.
+
+global:
+  adomiApp:
+    # Activates platform wiring in the app subcharts. Keep true under this umbrella.
+    enabled: true
+
+    # App type — must match the enabled subchart below (odoo | mailpit | generic).
+    type: odoo
+
+    # Public host + URL. Use a single DNS label under a wildcard-covered base domain
+    # (e.g. app-workspace-client.example.com) so one wildcard cert/record matches.
+    host: ""
+    url: ""
+
+    # Ingress.
+    ingressClassName: traefik
+    tls: []
+    # - secretName: wildcard-tls
+    #   hosts: ["*.example.com"]
+
+    # Database backend for this app.
+    database:
+      mode: none          # none | cnpg | external
+      # cnpg:
+      instances: 1
+      storage: 10Gi
+      storageClass: ""
+      imageName: ""       # empty = CNPG operator default
+      # external (mode=external): point at an existing server + Secret.
+      host: ""
+      port: 5432
+      existingSecret: ""
+      existingSecretKey: password
+      # Bootstrapped/connected database + role name (both modes).
+      name: app
+      user: app
+
+    # Single sign-on via the platform's Authentik (rendered as an SSOApplication CR
+    # reconciled by the identity operator).
+    sso:
+      enabled: false
+      protocol: none      # none | proxy | oauth2
+      displayName: ""     # defaults to the release name
+      group: ""           # Authentik dashboard category (often the client slug)
+      # proxy: Traefik forward-auth middleware ref (set by the platform).
+      forwardAuthMiddleware: ""
+      # oauth2: redirect paths appended to the URL; client creds land in this Secret.
+      redirectPaths: []
+      secret: ""          # defaults to <release>-oidc
+      scopes: []
+
+# ---------------------------------------------------------------------------
+# Subchart selection. Enable EXACTLY the one matching global.adomiApp.type (the
+# intent file / ApplicationSet does this). All default to off so an unselected app
+# never renders. Values under each key are passed straight to that subchart; the
+# platform wiring (db host/secret, ingress host, forward-auth) is derived from
+# global.adomiApp, so only app-specific knobs belong here.
+# ---------------------------------------------------------------------------
+
+odoo:
+  enabled: false
+  ingress:
+    enabled: true
+    longpolling:
+      enabled: true
+  postgresql:
+    enabled: false
+  database:
+    name: app
+    user: app
+    sslmode: require
+  odoo:
+    proxyMode: true
+    listDb: false
+
+mailpit:
+  enabled: false
+  ingress:
+    enabled: true
+
+generic:
+  enabled: false
+  ingress:
+    enabled: true
