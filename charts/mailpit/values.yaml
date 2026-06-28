@@ -37,6 +37,14 @@ securityContext:
       - ALL
   readOnlyRootFilesystem: true
 
+# Writable scratch for mailpit's temp DB (root FS is read-only above).
+volumeMounts:
+  - name: tmp
+    mountPath: /tmp
+volumes:
+  - name: tmp
+    emptyDir: {}
+
 service:
   type: ClusterIP
   # Web UI port (the Ingress routes here).
