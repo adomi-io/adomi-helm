@@ -86,7 +86,10 @@ odoo:
   withoutDemo: true
   loadLanguage: ""
   # Comma-separated modules to initialise on startup (ODOO_INIT).
-  initModules: ""
+  # `base` is Odoo's minimum schema — a fresh DB is unusable without it, and
+  # the image's init hook is idempotent (already-installed modules are skipped),
+  # so this is safe on every boot. Add your own modules alongside it.
+  initModules: "base"
   # Comma-separated modules to update on startup (ODOO_UPDATE).
   updateModules: ""
 
