@@ -2,8 +2,8 @@ apiVersion: v2
 name: mailpit
 description: A Helm chart for deploying Mailpit (a developer mail trap / SMTP catcher) on Kubernetes
 type: application
-version: 0.1.0
-appVersion: "1.21"
+version: 0.1.1
+appVersion: "v1.30"
 home: https://github.com/axllent/mailpit
 sources:
   - https://github.com/axllent/mailpit
