@@ -1,0 +1,9 @@
+apiVersion: v2
+name: platform-lib
+description: >-
+  Adomi platform library chart. Turns an app chart's named provision lists
+  (databases, sso, …) into platform capability CRs (Database, SSOApplication)
+  with explicit credential targets — nothing inferred. Included by per-app
+  charts; renders nothing on its own.
+type: library
+version: 0.1.0
