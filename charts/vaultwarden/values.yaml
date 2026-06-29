@@ -1,0 +1,138 @@
+# Default values for the Vaultwarden Helm chart (dani-garcia/vaultwarden).
+#
+# Adomi platform contract: provision ("spin it up") and connect ("hook it up")
+# are separate and FULLY explicit.
+#   - provision: named list (databases) -> Database capability CRs (via platform-lib)
+#   - connect:   the workload reads ONLY env; wire DATABASE_URL in .Values.env,
+#                referencing the Secret the provision side delivered.
+
+replicaCount: 1
+
+image:
+  repository: vaultwarden/server
+  # Defaults to the chart's appVersion (a pinned, immutable Vaultwarden release).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Identity stamped onto the capability CRs this chart emits (the Database
+# reconciler requires platform.adomi.io/client). Filled by the controller.
+platform:
+  client: ""
+
+# --- PROVISION (spin it up) -------------------------------------------------
+# Each entry emits a Database CR; the controller provisions it and delivers the
+# connection (url/host/user/dbname/password) to the named Secret in this namespace.
+databases: []
+  # - name: main
+  #   server: acme-prod-db        # DatabaseServer to create it on
+  #   databaseName: vaultwarden    # defaults to name
+  #   user: vaultwarden            # defaults to name
+  #   credentials:
+  #     secret: vaultwarden-db     # connection delivered here (this namespace)
+
+# --- CONNECT (hook it up) ---------------------------------------------------
+# Explicit env for the workload. Wire DATABASE_URL from the provisioned Secret's
+# `url` key. Nothing is inferred.
+env: []
+  # - name: DATABASE_URL
+  #   valueFrom:
+  #     secretKeyRef: { name: vaultwarden-db, key: url }
+  # - name: ADMIN_TOKEN
+  #   valueFrom:
+  #     secretKeyRef: { name: vaultwarden-admin, key: token }
+
+extraEnvFrom: []
+
+# Vaultwarden application configuration (not connection wiring).
+vaultwarden:
+  # Allow new account registration via the web vault.
+  signupsAllowed: false
+  # Internal HTTP port the server listens on. A high (unprivileged) port so the
+  # container needs no extra capabilities.
+  rocketPort: 8080
+  # DOMAIN tells Vaultwarden its public URL (required for WebAuthn/attachments).
+  # Auto-derived from the first ingress host when empty.
+  domain: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  httpPort: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: vaultwarden.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+# Vaultwarden stores attachments, sends, icons, the SQLite (unused with Postgres),
+# RSA keys and config under /data. Persist it.
+persistence:
+  enabled: true
+  mountPath: /data
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+  existingClaim: ""
+  annotations: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+livenessProbe:
+  httpGet:
+    path: /alive
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 6
+readinessProbe:
+  httpGet:
+    path: /alive
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+startupProbe:
+  httpGet:
+    path: /alive
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+extraVolumes: []
+extraVolumeMounts: []

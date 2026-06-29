@@ -1,0 +1,24 @@
+apiVersion: v2
+name: vaultwarden
+description: A Helm chart for deploying Vaultwarden (a Bitwarden-compatible server) on the Adomi platform
+type: application
+# Chart version. Bump on every change to the chart itself.
+version: 0.1.0
+# Tracks the Vaultwarden release shipped by the image (an immutable upstream tag).
+appVersion: "1.36.0"
+home: https://github.com/dani-garcia/vaultwarden
+sources:
+  - https://github.com/dani-garcia/vaultwarden
+maintainers:
+  - name: Adomi Software, LLC
+    email: github@adomisoftware.com
+keywords:
+  - vaultwarden
+  - bitwarden
+  - passwords
+  - postgresql
+icon: https://raw.githubusercontent.com/dani-garcia/vaultwarden/main/resources/vaultwarden-icon-white.png
+dependencies:
+  - name: platform-lib
+    version: 0.1.0
+    repository: file://../platform-lib

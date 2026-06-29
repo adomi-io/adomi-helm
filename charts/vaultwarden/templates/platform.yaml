@@ -1,0 +1,4 @@
+{{- /* Provision side: named lists -> capability CRs (via the platform-lib library).
+       Vaultwarden has its own auth, so no SSO capability — just the database. */}}
+{{- include "platform.databases" . }}
+{{- include "platform.sso" . }}

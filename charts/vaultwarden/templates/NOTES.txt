@@ -1,0 +1,21 @@
+Thank you for installing {{ .Chart.Name }} ({{ include "vaultwarden.image" . }}).
+
+Release name: {{ .Release.Name }}
+Namespace:    {{ .Release.Namespace }}
+
+1. Wait for Vaultwarden to become ready:
+
+   kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "vaultwarden.fullname" . }}
+
+2. Reach Vaultwarden:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "vaultwarden.fullname" . }} 8080:{{ .Values.service.httpPort }}
+{{- end }}
+
+3. This chart is a pure consumer: the database connection is supplied explicitly
+   via .Values.env (wire DATABASE_URL from the provisioned Secret's `url` key). The
+   database is provisioned separately from .Values.databases (a Database capability CR).
