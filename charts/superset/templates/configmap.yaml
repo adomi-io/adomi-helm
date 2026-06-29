@@ -59,6 +59,15 @@ data:
   superset_bootstrap.sh: |
     #!/usr/bin/env bash
     set -eu
+    {{- with .Values.superset.extraPipPackages }}
+
+    # The lean apache/superset image ships no database drivers. Install the ones
+    # this deployment needs (default: psycopg2-binary for Postgres). For
+    # reproducible/offline deploys, bake these into a custom image instead and
+    # set superset.extraPipPackages: [].
+    echo "[bootstrap] installing extra python packages: {{ join " " . }}"
+    pip install --no-cache-dir {{ join " " . }}
+    {{- end }}
 
     echo "[bootstrap] applying migrations (retries until the database is reachable)..."
     until superset db upgrade; do
