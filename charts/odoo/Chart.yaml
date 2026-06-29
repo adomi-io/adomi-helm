@@ -3,7 +3,7 @@ name: odoo
 description: A Helm chart for deploying Adomi-io Odoo (ghcr.io/adomi-io/odoo) on Kubernetes
 type: application
 # Chart version. Bump on every change to the chart itself.
-version: 0.1.1
+version: 0.1.2
 # Tracks the default Odoo major line shipped by the image.
 appVersion: "19.0"
 home: https://github.com/adomi-io/odoo

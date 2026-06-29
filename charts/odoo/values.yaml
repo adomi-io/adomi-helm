@@ -13,7 +13,11 @@ image:
   repository: ghcr.io/adomi-io/odoo
   # Defaults to the chart's appVersion (the Odoo major line) when left empty.
   tag: ""
-  pullPolicy: IfNotPresent
+  # The default tag (`19.0`) is a FLOATING nightly tag — the image is rebuilt in
+  # place. IfNotPresent would pin nodes to a stale cached layer, so pull every
+  # roll. Pin `tag` to an immutable ref and switch this to IfNotPresent if you
+  # need reproducible deploys.
+  pullPolicy: Always
 
 imagePullSecrets: []
 nameOverride: ""
