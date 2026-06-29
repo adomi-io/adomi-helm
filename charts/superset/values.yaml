@@ -89,12 +89,15 @@ superset:
   # gunicorn worker processes (run-server.sh SERVER_WORKER_AMOUNT). 0/empty
   # leaves the image default.
   workers: 4
-  # The lean apache/superset image ships no DB drivers. The bootstrap pip-installs
-  # these on first boot (behind the startup probe). psycopg2-binary = Postgres.
+  # The lean apache/superset image ships neither DB drivers nor the OAuth lib.
+  # The bootstrap pip-installs these on first boot (behind the startup probe):
+  #   psycopg2-binary -> Postgres metadata DB driver
+  #   authlib         -> required by Flask-AppBuilder when SSO/OAuth is enabled
   # Add e.g. mysqlclient for MySQL. Set to [] and bake them into a custom image
   # for reproducible/offline deploys.
   extraPipPackages:
     - psycopg2-binary
+    - authlib
 
 serviceAccount:
   create: true

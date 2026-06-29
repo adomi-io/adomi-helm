@@ -3,7 +3,7 @@ name: superset
 description: A Helm chart for deploying Apache Superset (apache/superset) on the Adomi platform
 type: application
 # Chart version. Bump on every change to the chart itself.
-version: 0.1.3
+version: 0.1.4
 # Tracks the Superset release shipped by the image (an immutable upstream tag).
 appVersion: "5.0.0"
 home: https://superset.apache.org
