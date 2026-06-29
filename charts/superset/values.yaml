@@ -1,0 +1,168 @@
+# Default values for the Superset Helm chart.
+# This deploys apache/superset, configured through a small superset_config.py
+# (mounted by the chart) that reads every connection value from env.
+#
+# This chart follows the Adomi platform contract: provision ("spin it up") and
+# connect ("hook it up") are separate and FULLY explicit — nothing is inferred.
+#   - provision: named lists (databases, sso) -> capability CRs (via platform-lib)
+#   - connect:   the workload reads ONLY env; you wire connections in .Values.env
+
+replicaCount: 1
+
+image:
+  repository: apache/superset
+  # Defaults to the chart's appVersion (a pinned, immutable Superset release).
+  tag: ""
+  # The default tag is an immutable upstream release, so a cached layer is always
+  # correct — only a new appVersion (new tag) needs a pull.
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Identity stamped onto the capability CRs this chart emits (the Database
+# reconciler requires platform.adomi.io/client). Filled by the controller.
+platform:
+  client: ""
+
+# --- PROVISION (spin it up) -------------------------------------------------
+# Each entry emits a capability CR. The controller fulfils it and delivers
+# credentials to the Secret you name here; reference that Secret from .Values.env.
+databases: []
+  # - name: meta
+  #   server: acme-prod-db        # DatabaseServer to create it on
+  #   databaseName: superset      # defaults to name
+  #   user: superset              # defaults to name
+  #   credentials:
+  #     secret: superset-meta-db  # password delivered here (this namespace)
+
+sso: []
+  # - name: web
+  #   protocol: oauth2            # oauth2 | proxy
+  #   redirectUris:
+  #     - https://superset.example.com/oauth-authorized/authentik
+  #   credentials:
+  #     secret: superset-oidc     # client-id/client-secret delivered here
+
+# --- CONNECT (hook it up) ---------------------------------------------------
+# Explicit env for the workload. The DB connection, SECRET_KEY, admin bootstrap
+# and any OAuth creds live here, referencing the Secrets the provision side
+# delivered. Nothing is inferred. Required keys are listed in NOTES.txt.
+env: []
+  # - name: DATABASE_HOST
+  #   value: meta-rw.acme-production.svc.cluster.local
+  # - name: DATABASE_PORT
+  #   value: "5432"
+  # - name: DATABASE_USER
+  #   value: superset
+  # - name: DATABASE_DB
+  #   value: superset
+  # - name: DATABASE_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef: { name: superset-meta-db, key: password }
+  # - name: SUPERSET_SECRET_KEY
+  #   valueFrom:
+  #     secretKeyRef: { name: superset-secret, key: secret-key }
+  # - name: SUPERSET_ADMIN_USERNAME
+  #   value: admin
+  # - name: SUPERSET_ADMIN_EMAIL
+  #   value: admin@example.com
+  # - name: SUPERSET_ADMIN_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef: { name: superset-admin, key: password }
+  # # Optional OAuth (activates the AUTH_OAUTH block in superset_config.py):
+  # - name: SUPERSET_OAUTH_CLIENT_ID
+  #   valueFrom:
+  #     secretKeyRef: { name: superset-oidc, key: client-id }
+  # - name: SUPERSET_OAUTH_CLIENT_SECRET
+  #   valueFrom:
+  #     secretKeyRef: { name: superset-oidc, key: client-secret }
+  # - name: SUPERSET_OAUTH_METADATA_URL
+  #   value: https://auth.example.com/application/o/superset/.well-known/openid-configuration
+
+# Inject env vars in bulk from existing ConfigMaps / Secrets.
+extraEnvFrom: []
+
+# Superset application configuration (not connection wiring).
+superset:
+  # gunicorn worker processes (run-server.sh SERVER_WORKER_AMOUNT). 0/empty
+  # leaves the image default.
+  workers: 4
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# apache/superset runs as the non-root "superset" user (uid/gid 1000).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  # Superset writes to its home (~/.superset) and /tmp, so the root filesystem
+  # cannot be read-only.
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  httpPort: 8088
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: superset.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+# Health probes hit Superset's built-in /health endpoint. First boot runs DB
+# migrations + init, so the startup probe gives it generous room before
+# liveness/readiness take over.
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 6
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 60
+
+extraVolumes: []
+extraVolumeMounts: []

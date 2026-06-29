@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "superset.fullname" . }}
+  labels:
+    {{- include "superset.labels" . | nindent 4 }}
+data:
+  # ---------------------------------------------------------------------------
+  # superset_config.py — the workload is a pure consumer: every connection value
+  # is read from env (CONNECT side). The chart never infers a host or secret name;
+  # you wire them in .Values.env, referencing the Secrets the provision side
+  # (.Values.databases / .Values.sso capability CRs) delivered.
+  # ---------------------------------------------------------------------------
+  superset_config.py: |
+    import os
+
+    SECRET_KEY = os.environ["SUPERSET_SECRET_KEY"]
+
+    SQLALCHEMY_DATABASE_URI = (
+        "postgresql+psycopg2://"
+        f"{os.environ['DATABASE_USER']}:{os.environ['DATABASE_PASSWORD']}"
+        f"@{os.environ['DATABASE_HOST']}:{os.environ.get('DATABASE_PORT', '5432')}"
+        f"/{os.environ['DATABASE_DB']}"
+    )
+
+    # Superset sits behind the platform ingress, which terminates TLS and sets
+    # X-Forwarded-*; trust those headers.
+    ENABLE_PROXY_FIX = True
+
+    # Optional OAuth (Authentik) — activates only when credentials are wired in
+    # via env (the SSOApplication capability delivers client-id/secret to a
+    # Secret; reference it from .Values.env). Nothing is inferred.
+    _oauth_client_id = os.environ.get("SUPERSET_OAUTH_CLIENT_ID")
+    if _oauth_client_id:
+        from flask_appbuilder.security.manager import AUTH_OAUTH
+
+        AUTH_TYPE = AUTH_OAUTH
+        AUTH_USER_REGISTRATION = True
+        AUTH_USER_REGISTRATION_ROLE = os.environ.get("SUPERSET_OAUTH_DEFAULT_ROLE", "Gamma")
+        OAUTH_PROVIDERS = [
+            {
+                "name": os.environ.get("SUPERSET_OAUTH_NAME", "authentik"),
+                "icon": "fa-key",
+                "token_key": "access_token",
+                "remote_app": {
+                    "client_id": _oauth_client_id,
+                    "client_secret": os.environ["SUPERSET_OAUTH_CLIENT_SECRET"],
+                    "server_metadata_url": os.environ["SUPERSET_OAUTH_METADATA_URL"],
+                    "client_kwargs": {"scope": "openid email profile"},
+                },
+            }
+        ]
+
+  # ---------------------------------------------------------------------------
+  # superset_bootstrap.sh — sourced before the server starts. Runs DB migrations
+  # (which also doubles as the wait-for-DB loop), initialises roles/permissions,
+  # and creates the admin user. All steps are idempotent and safe on every boot.
+  # ---------------------------------------------------------------------------
+  superset_bootstrap.sh: |
+    #!/usr/bin/env bash
+    set -eu
+
+    echo "[bootstrap] applying migrations (retries until the database is reachable)..."
+    until superset db upgrade; do
+      echo "[bootstrap] database not ready yet; retrying in 5s"
+      sleep 5
+    done
+
+    echo "[bootstrap] initialising roles and permissions..."
+    superset init
+
+    if [ -n "${SUPERSET_ADMIN_USERNAME:-}" ]; then
+      echo "[bootstrap] ensuring admin user '${SUPERSET_ADMIN_USERNAME}' exists..."
+      superset fab create-admin \
+        --username "${SUPERSET_ADMIN_USERNAME}" \
+        --firstname "${SUPERSET_ADMIN_FIRSTNAME:-Admin}" \
+        --lastname "${SUPERSET_ADMIN_LASTNAME:-User}" \
+        --email "${SUPERSET_ADMIN_EMAIL:-admin@example.com}" \
+        --password "${SUPERSET_ADMIN_PASSWORD:?SUPERSET_ADMIN_PASSWORD is required when SUPERSET_ADMIN_USERNAME is set}" \
+        || true
+    fi
+
+    echo "[bootstrap] done."

@@ -1,0 +1,3 @@
+{{- /* Provision side: named lists -> capability CRs (via the platform-lib library). */}}
+{{- include "platform.databases" . }}
+{{- include "platform.sso" . }}

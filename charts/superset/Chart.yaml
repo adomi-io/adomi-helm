@@ -1,0 +1,24 @@
+apiVersion: v2
+name: superset
+description: A Helm chart for deploying Apache Superset (apache/superset) on the Adomi platform
+type: application
+# Chart version. Bump on every change to the chart itself.
+version: 0.1.0
+# Tracks the Superset release shipped by the image (an immutable upstream tag).
+appVersion: "5.0.0"
+home: https://superset.apache.org
+sources:
+  - https://github.com/apache/superset
+maintainers:
+  - name: Adomi Software, LLC
+    email: github@adomisoftware.com
+keywords:
+  - superset
+  - analytics
+  - bi
+  - postgresql
+icon: https://superset.apache.org/img/superset-logo-horiz.svg
+dependencies:
+  - name: platform-lib
+    version: 0.1.0
+    repository: file://../platform-lib

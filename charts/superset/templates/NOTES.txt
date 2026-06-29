@@ -1,0 +1,28 @@
+Thank you for installing {{ .Chart.Name }} ({{ include "superset.image" . }}).
+
+Release name: {{ .Release.Name }}
+Namespace:    {{ .Release.Namespace }}
+
+1. Wait for Superset to become ready (first boot runs DB migrations + init):
+
+   kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "superset.fullname" . }}
+
+2. Reach Superset:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "superset.fullname" . }} 8088:{{ .Values.service.httpPort }}
+   Then open http://127.0.0.1:8088
+{{- end }}
+
+3. This chart is a pure consumer: the metadata database connection, SECRET_KEY,
+   admin bootstrap and any OAuth credentials are supplied explicitly via
+   .Values.env (referencing Secrets). The database and SSO application are
+   provisioned separately from .Values.databases / .Values.sso (capability CRs).
+
+Required env (CONNECT side):
+   DATABASE_HOST, DATABASE_PORT, DATABASE_USER, DATABASE_DB, DATABASE_PASSWORD
+   SUPERSET_SECRET_KEY
+   SUPERSET_ADMIN_USERNAME, SUPERSET_ADMIN_PASSWORD, SUPERSET_ADMIN_EMAIL
