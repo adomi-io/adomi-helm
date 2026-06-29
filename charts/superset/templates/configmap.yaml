@@ -32,6 +32,7 @@ data:
     # Secret; reference it from .Values.env). Nothing is inferred.
     _oauth_client_id = os.environ.get("SUPERSET_OAUTH_CLIENT_ID")
     if _oauth_client_id:
+        import json
         from flask_appbuilder.security.manager import AUTH_OAUTH
         from superset.security import SupersetSecurityManager
 
@@ -40,7 +41,16 @@ data:
         AUTH_TYPE = AUTH_OAUTH
         # Auto-create a Superset user on first OIDC login.
         AUTH_USER_REGISTRATION = True
-        AUTH_USER_REGISTRATION_ROLE = os.environ.get("SUPERSET_OAUTH_DEFAULT_ROLE", "Gamma")
+        AUTH_USER_REGISTRATION_ROLE = os.environ.get("SUPERSET_OAUTH_DEFAULT_ROLE", "Public")
+
+        # Map IdP group names -> Superset roles, re-synced on every login. Mirrors
+        # "g, <group>, role:admin" RBAC .
+        # Requires the `groups` scope so the group claim is returned.
+        _role_mapping = json.loads(os.environ.get("SUPERSET_OAUTH_ROLE_MAPPING", "{}"))
+        if _role_mapping:
+            AUTH_ROLES_MAPPING = _role_mapping
+            AUTH_ROLES_SYNC_AT_LOGIN = True
+
         OAUTH_PROVIDERS = [
             {
                 "name": _provider_name,
@@ -50,7 +60,11 @@ data:
                     "client_id": _oauth_client_id,
                     "client_secret": os.environ["SUPERSET_OAUTH_CLIENT_SECRET"],
                     "server_metadata_url": os.environ["SUPERSET_OAUTH_METADATA_URL"],
-                    "client_kwargs": {"scope": "openid email profile"},
+                    "client_kwargs": {
+                        "scope": os.environ.get(
+                            "SUPERSET_OAUTH_SCOPES", "openid email profile groups"
+                        ),
+                    },
                 },
             }
         ]

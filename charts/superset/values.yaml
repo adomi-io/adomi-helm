@@ -98,6 +98,18 @@ superset:
   extraPipPackages:
     - psycopg2-binary
     - authlib
+  # OIDC role mapping (active only when SSO is wired via .Values.env). Mirrors
+  # ArgoCD's group-based RBAC: map Authentik group names to Superset roles, and
+  # roles are re-synced from the IdP on every login.
+  oauth:
+    # Authentik group name -> Superset role(s). Create the group in Authentik
+    # (like ArgoCD's "Argo CD Admins") and add your users. {} disables mapping.
+    roleMapping:
+      "Superset Admins": ["Admin"]
+    # Role granted to users who match no mapped group.
+    defaultRole: "Public"
+    # OIDC scopes. `groups` is REQUIRED for the group claim used by roleMapping.
+    scopes: "openid email profile groups"
 
 serviceAccount:
   create: true

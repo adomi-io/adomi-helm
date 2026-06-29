@@ -68,6 +68,16 @@ spec:
             - name: SERVER_WORKER_AMOUNT
               value: {{ .Values.superset.workers | quote }}
             {{- end }}
+            {{- with .Values.superset.oauth }}
+            # OIDC role mapping config (read by superset_config.py only when SSO
+            # is enabled). Group->role mapping mirrors ArgoCD's RBAC.
+            - name: SUPERSET_OAUTH_ROLE_MAPPING
+              value: {{ .roleMapping | default dict | toJson | quote }}
+            - name: SUPERSET_OAUTH_DEFAULT_ROLE
+              value: {{ .defaultRole | default "Public" | quote }}
+            - name: SUPERSET_OAUTH_SCOPES
+              value: {{ .scopes | default "openid email profile groups" | quote }}
+            {{- end }}
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
