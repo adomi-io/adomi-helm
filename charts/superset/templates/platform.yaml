@@ -1,3 +1,18 @@
-{{- /* Provision side: named lists -> capability CRs (via the platform-lib library). */}}
+{{- /*
+Provision side: named lists -> capability CRs (via the platform-lib library).
+
+Superset extra: the OIDC role mapping (superset.oauth.roleMapping) references
+Authentik group names that must exist for admin access to work. Rather than make
+the operator create them by hand, inject those group names into each SSO entry's
+`groups` — the SSOApplication controller ensures they exist on reconcile (the
+same path grafana/argocd use). So admin access works the moment superset is
+deployed; membership is then managed in Authentik.
+*/}}
+{{- $adminGroups := keys (((.Values.superset).oauth).roleMapping | default dict) | sortAlpha }}
+{{- if $adminGroups }}
+{{- range $sso := .Values.sso | default list }}
+{{- $_ := set $sso "groups" (concat ($sso.groups | default list) $adminGroups | uniq) }}
+{{- end }}
+{{- end }}
 {{- include "platform.databases" . }}
 {{- include "platform.sso" . }}

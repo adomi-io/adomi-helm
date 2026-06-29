@@ -42,6 +42,8 @@ spec:
 {{/*
 platform.sso — emit one SSOApplication CR per entry in .Values.sso. Each:
   name (required), protocol (oauth2|proxy), displayName?, redirectUris?,
+  groups?  (Authentik group names the controller ensures exist — apps reference
+           them in their SSO RBAC, e.g. role mapping),
   credentials: { secret? }   (the OIDC/proxy credential Secret name)
 */}}
 {{- define "platform.sso" -}}
@@ -60,6 +62,10 @@ spec:
   {{- end }}
   {{- with $sso.redirectUris }}
   redirectUris:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $sso.groups }}
+  groups:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   {{- with $sso.credentials }}
