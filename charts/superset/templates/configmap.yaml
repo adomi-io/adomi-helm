@@ -33,13 +33,17 @@ data:
     _oauth_client_id = os.environ.get("SUPERSET_OAUTH_CLIENT_ID")
     if _oauth_client_id:
         from flask_appbuilder.security.manager import AUTH_OAUTH
+        from superset.security import SupersetSecurityManager
+
+        _provider_name = os.environ.get("SUPERSET_OAUTH_NAME", "authentik")
 
         AUTH_TYPE = AUTH_OAUTH
+        # Auto-create a Superset user on first OIDC login.
         AUTH_USER_REGISTRATION = True
         AUTH_USER_REGISTRATION_ROLE = os.environ.get("SUPERSET_OAUTH_DEFAULT_ROLE", "Gamma")
         OAUTH_PROVIDERS = [
             {
-                "name": os.environ.get("SUPERSET_OAUTH_NAME", "authentik"),
+                "name": _provider_name,
                 "icon": "fa-key",
                 "token_key": "access_token",
                 "remote_app": {
@@ -50,6 +54,24 @@ data:
                 },
             }
         ]
+
+        # Flask-AppBuilder has no built-in profile parser for a generic OIDC
+        # provider (e.g. Authentik), so map the standard OIDC userinfo claims to
+        # a Superset user ourselves — otherwise registration fails after login.
+        class _OIDCSecurityManager(SupersetSecurityManager):
+            def oauth_user_info(self, provider, response=None):
+                if provider == _provider_name:
+                    userinfo = self.appbuilder.sm.oauth_remotes[provider].get("userinfo").json()
+                    return {
+                        "username": userinfo.get("preferred_username") or userinfo.get("email"),
+                        "email": userinfo.get("email", ""),
+                        "first_name": userinfo.get("given_name", ""),
+                        "last_name": userinfo.get("family_name", ""),
+                        "role_keys": userinfo.get("groups", []),
+                    }
+                return {}
+
+        CUSTOM_SECURITY_MANAGER = _OIDCSecurityManager
 
   # ---------------------------------------------------------------------------
   # superset_bootstrap.sh — sourced before the server starts. Runs DB migrations
