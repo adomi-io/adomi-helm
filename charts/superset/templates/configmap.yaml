@@ -60,16 +60,19 @@ data:
         # a Superset user ourselves — otherwise registration fails after login.
         class _OIDCSecurityManager(SupersetSecurityManager):
             def oauth_user_info(self, provider, response=None):
-                if provider == _provider_name:
-                    userinfo = self.appbuilder.sm.oauth_remotes[provider].get("userinfo").json()
-                    return {
-                        "username": userinfo.get("preferred_username") or userinfo.get("email"),
-                        "email": userinfo.get("email", ""),
-                        "first_name": userinfo.get("given_name", ""),
-                        "last_name": userinfo.get("family_name", ""),
-                        "role_keys": userinfo.get("groups", []),
-                    }
-                return {}
+                if provider != _provider_name:
+                    return {}
+                remote = self.appbuilder.sm.oauth_remotes[provider]
+                # Prefer the id_token claims Authlib already validated; otherwise
+                # call the OIDC userinfo endpoint (resolved from discovery).
+                data = (response or {}).get("userinfo") or remote.userinfo(token=response)
+                return {
+                    "username": data.get("preferred_username") or data.get("email") or data.get("sub"),
+                    "email": data.get("email", ""),
+                    "first_name": data.get("given_name", ""),
+                    "last_name": data.get("family_name", ""),
+                    "role_keys": data.get("groups", []),
+                }
 
         CUSTOM_SECURITY_MANAGER = _OIDCSecurityManager
 
