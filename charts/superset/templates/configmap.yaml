@@ -62,11 +62,13 @@ data:
     {{- with .Values.superset.extraPipPackages }}
 
     # The lean apache/superset image ships no database drivers. Install the ones
-    # this deployment needs (default: psycopg2-binary for Postgres). For
+    # this deployment needs (default: psycopg2-binary for Postgres). The image's
+    # venv is root-owned (not writable by the runtime user), so install into the
+    # writable /app/pylibs volume, which the container puts on PYTHONPATH. For
     # reproducible/offline deploys, bake these into a custom image instead and
     # set superset.extraPipPackages: [].
     echo "[bootstrap] installing extra python packages: {{ join " " . }}"
-    pip install --no-cache-dir {{ join " " . }}
+    pip install --no-cache-dir --target=/app/pylibs {{ join " " . }}
     {{- end }}
 
     echo "[bootstrap] applying migrations (retries until the database is reachable)..."

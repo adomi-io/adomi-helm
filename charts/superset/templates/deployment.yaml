@@ -58,6 +58,12 @@ spec:
               value: "8088"
             - name: SUPERSET_CONFIG_PATH
               value: /app/pythonpath/superset_config.py
+            # Runtime-installed DB drivers (see the bootstrap) land here; put it
+            # on PYTHONPATH so the root-owned venv can import them. Keep
+            # /app/pythonpath for the mounted superset_config.py.
+            - name: PYTHONPATH
+              value: /app/pylibs:/app/pythonpath
+
             {{- if .Values.superset.workers }}
             - name: SERVER_WORKER_AMOUNT
               value: {{ .Values.superset.workers | quote }}
@@ -92,6 +98,8 @@ spec:
             - name: config
               mountPath: /app/pythonpath/superset_bootstrap.sh
               subPath: superset_bootstrap.sh
+            - name: pylibs
+              mountPath: /app/pylibs
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -99,6 +107,9 @@ spec:
         - name: config
           configMap:
             name: {{ include "superset.fullname" . }}
+        # Writable scratch for runtime-installed python packages (DB drivers).
+        - name: pylibs
+          emptyDir: {}
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
