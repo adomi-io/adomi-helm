@@ -1,0 +1,124 @@
+# Default values for the Uptime Kuma Helm chart (louislam/uptime-kuma).
+#
+# Adomi platform contract: provision ("spin it up") and connect ("hook it up")
+# are separate and FULLY explicit.
+#   - provision: named lists (sso) -> capability CRs (via platform-lib)
+#   - connect:   the workload reads ONLY env (.Values.env)
+#
+# Uptime Kuma stores everything in an embedded SQLite database on a PVC, so it
+# provisions NO platform Database. It has its own local login (you set the admin
+# account on first visit). Platform SSO is optional via a `proxy` SSOApplication
+# (Authentik forward-auth fronting the ingress).
+
+replicaCount: 1
+
+image:
+  repository: louislam/uptime-kuma
+  # Defaults to the chart's appVersion (a pinned, immutable Uptime Kuma release).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Identity stamped onto the capability CRs this chart emits. Filled by the controller.
+platform:
+  client: ""
+
+# --- PROVISION (spin it up) -------------------------------------------------
+# Uptime Kuma uses embedded SQLite — no platform Database.
+databases: []
+
+# sso: optional. A `proxy` entry fronts the host with Authentik forward-auth.
+sso: []
+  # - name: web
+  #   protocol: proxy
+  #   displayName: Uptime Kuma
+  #   credentials:
+  #     secret: uptime-kuma-sso
+
+# --- CONNECT (hook it up) ---------------------------------------------------
+# Explicit env for the workload. Uptime Kuma needs none by default.
+env: []
+
+extraEnvFrom: []
+
+# Uptime Kuma application configuration.
+uptimeKuma:
+  # Internal HTTP port the server listens on.
+  port: 3001
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# Left permissive by default: Uptime Kuma's ICMP/ping monitors need NET_RAW.
+# Tighten per-deployment if you don't use ping checks.
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  httpPort: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: uptime-kuma.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+# Uptime Kuma stores its SQLite DB, uploads and config under /app/data. Persist it.
+persistence:
+  enabled: true
+  mountPath: /app/data
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 4Gi
+  existingClaim: ""
+  annotations: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 6
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+startupProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 60
+
+extraVolumes: []
+extraVolumeMounts: []

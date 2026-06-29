@@ -1,0 +1,24 @@
+apiVersion: v2
+name: uptime-kuma
+description: A Helm chart for deploying Uptime Kuma (a self-hosted status / uptime monitor) on the Adomi platform
+type: application
+# Chart version. Bump on every change to the chart itself.
+version: 0.1.0
+# Tracks the Uptime Kuma release shipped by the image (an immutable upstream tag).
+appVersion: "1.23.16"
+home: https://github.com/louislam/uptime-kuma
+sources:
+  - https://github.com/louislam/uptime-kuma
+maintainers:
+  - name: Adomi Software, LLC
+    email: github@adomisoftware.com
+keywords:
+  - uptime-kuma
+  - monitoring
+  - status-page
+  - uptime
+icon: https://raw.githubusercontent.com/louislam/uptime-kuma/master/public/icon.svg
+dependencies:
+  - name: platform-lib
+    version: 0.1.0
+    repository: file://../platform-lib

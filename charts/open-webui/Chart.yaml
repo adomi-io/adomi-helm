@@ -1,0 +1,25 @@
+apiVersion: v2
+name: open-webui
+description: A Helm chart for deploying Open WebUI (a chat interface for self-hosted LLMs) on the Adomi platform
+type: application
+# Chart version. Bump on every change to the chart itself.
+version: 0.1.0
+# Tracks the Open WebUI release shipped by the image (an immutable upstream tag).
+appVersion: "0.6.5"
+home: https://github.com/open-webui/open-webui
+sources:
+  - https://github.com/open-webui/open-webui
+maintainers:
+  - name: Adomi Software, LLC
+    email: github@adomisoftware.com
+keywords:
+  - open-webui
+  - llm
+  - chat
+  - ai
+  - postgresql
+icon: https://raw.githubusercontent.com/open-webui/open-webui/main/static/favicon.png
+dependencies:
+  - name: platform-lib
+    version: 0.1.0
+    repository: file://../platform-lib

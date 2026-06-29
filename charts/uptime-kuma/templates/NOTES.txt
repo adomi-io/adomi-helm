@@ -1,0 +1,21 @@
+Thank you for installing {{ .Chart.Name }} ({{ include "uptime-kuma.image" . }}).
+
+Release name: {{ .Release.Name }}
+Namespace:    {{ .Release.Namespace }}
+
+1. Wait for Uptime Kuma to become ready:
+
+   kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "uptime-kuma.fullname" . }}
+
+2. Reach Uptime Kuma and create the admin account on first visit:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "uptime-kuma.fullname" . }} 3001:{{ .Values.service.httpPort }}
+{{- end }}
+
+3. Uptime Kuma keeps its data in embedded SQLite on the PVC and has its own login.
+   Platform SSO is optional (a `proxy` entry in .Values.sso fronts the host with
+   Authentik forward-auth).

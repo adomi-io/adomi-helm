@@ -1,0 +1,158 @@
+# Default values for the Open WebUI Helm chart (open-webui/open-webui).
+#
+# Adomi platform contract: provision ("spin it up") and connect ("hook it up")
+# are separate and FULLY explicit.
+#   - provision: named lists (databases, sso) -> capability CRs (via platform-lib)
+#   - connect:   the workload reads ONLY env; wire DATABASE_URL and the OAuth
+#                credentials in .Values.env, referencing the Secrets the provision
+#                side delivered.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/open-webui/open-webui
+  # Defaults to the chart's appVersion (a pinned, immutable Open WebUI release).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Identity stamped onto the capability CRs this chart emits (the Database
+# reconciler requires platform.adomi.io/client). Filled by the controller.
+platform:
+  client: ""
+
+# --- PROVISION (spin it up) -------------------------------------------------
+# databases: each entry emits a Database CR; the controller provisions it and
+# delivers the connection (url/host/user/dbname/password) to the named Secret.
+databases: []
+  # - name: main
+  #   server: acme-prod-db
+  #   databaseName: openwebui
+  #   user: openwebui
+  #   credentials:
+  #     secret: openwebui-db
+
+# sso: each entry emits an SSOApplication CR; the controller registers the app in
+# Authentik and delivers the OIDC credentials to the named Secret.
+sso: []
+  # - name: web
+  #   protocol: oauth2
+  #   displayName: Open WebUI
+  #   redirectUris:
+  #     - https://chat.example.com/oauth/oidc/callback
+  #   credentials:
+  #     secret: openwebui-oidc
+
+# --- CONNECT (hook it up) ---------------------------------------------------
+# Explicit env for the workload. Wire DATABASE_URL from the provisioned Secret's
+# `url` key and the OAuth credentials from the SSO Secret. Nothing is inferred.
+env: []
+  # - name: DATABASE_URL
+  #   valueFrom:
+  #     secretKeyRef: { name: openwebui-db, key: url }
+  # - name: OPENAI_API_BASE_URL
+  #   value: http://litellm.litellm.svc.cluster.local:4000/v1
+  # - name: ENABLE_OAUTH_SIGNUP
+  #   value: "true"
+  # - name: OAUTH_CLIENT_ID
+  #   valueFrom:
+  #     secretKeyRef: { name: openwebui-oidc, key: client-id }
+  # - name: OAUTH_CLIENT_SECRET
+  #   valueFrom:
+  #     secretKeyRef: { name: openwebui-oidc, key: client-secret }
+  # - name: OPENID_PROVIDER_URL
+  #   value: https://auth.example.com/application/o/openwebui/.well-known/openid-configuration
+
+extraEnvFrom: []
+
+# Open WebUI application configuration (not connection wiring).
+openwebui:
+  # Internal HTTP port the server listens on.
+  port: 8080
+  # Public base URL (used for OAuth redirects). Auto-derived from the first
+  # ingress host when empty.
+  url: ""
+  # Disable the bundled Ollama (point at an external OpenAI-compatible backend
+  # via OPENAI_API_BASE_URL in .Values.env instead).
+  enableOllamaApi: false
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  httpPort: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: open-webui.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+# Open WebUI stores uploads, the embedded vector DB and config under
+# /app/backend/data. Persist it.
+persistence:
+  enabled: true
+  mountPath: /app/backend/data
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+  existingClaim: ""
+  annotations: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 6
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 60
+
+extraVolumes: []
+extraVolumeMounts: []

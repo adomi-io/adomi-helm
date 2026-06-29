@@ -1,0 +1,4 @@
+{{- /* Provision side: named lists -> capability CRs (via the platform-lib library).
+       Open WebUI uses a Postgres database and OIDC login. */}}
+{{- include "platform.databases" . }}
+{{- include "platform.sso" . }}

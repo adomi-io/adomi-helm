@@ -1,0 +1,4 @@
+{{- /* Provision side: named lists -> capability CRs (via the platform-lib library).
+       Uptime Kuma uses embedded SQLite (no Database); SSO is optional (proxy). */}}
+{{- include "platform.databases" . }}
+{{- include "platform.sso" . }}
