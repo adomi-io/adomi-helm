@@ -37,6 +37,18 @@ databases: []
   # - name: windmill
   #   server: acme-prod-db
   #   databaseName: windmill
+
+# Windmill requires two pre-existing Postgres roles before its migrations run:
+# windmill_admin (BYPASSRLS) and windmill_user, with the connecting role a member of
+# both. The generic Database capability creates only the login role, so the chart
+# declares this setup as initSql, which the provisioning superuser runs (idempotently)
+# against the database after creating it. Assumes the connecting role is "windmill".
+databaseInitSql:
+  - "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='windmill_user') THEN CREATE ROLE windmill_user; END IF; END $$;"
+  - "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='windmill_admin') THEN CREATE ROLE windmill_admin BYPASSRLS; END IF; END $$;"
+  - "GRANT windmill_user TO windmill_admin;"
+  - 'GRANT windmill_admin TO "windmill";'
+  - 'GRANT windmill_user TO "windmill";'
   #   user: windmill
   #   credentials:
   #     secret: windmill-db

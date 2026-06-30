@@ -19,6 +19,7 @@ credentials.secret is set, delivers the password to that Secret in this
 namespace. The workload reads it from env (explicit) — never inferred here.
 */}}
 {{- define "platform.databases" -}}
+{{- $chartInitSql := .Values.databaseInitSql | default list -}}
 {{- range $db := .Values.databases | default list }}
 ---
 apiVersion: platform.adomi.io/v1alpha1
@@ -34,6 +35,14 @@ spec:
   user: {{ $db.user | default $db.name | quote }}
   {{- with $db.credentials }}
   credentials:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- /* initSql = chart-level .Values.databaseInitSql (app-specific DB setup the
+         chart knows it needs, e.g. auxiliary roles) + any per-entry $db.initSql.
+         Runs as the server superuser after provisioning; keep it idempotent. */}}
+  {{- $initSql := concat $chartInitSql ($db.initSql | default list) }}
+  {{- with $initSql }}
+  initSql:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 {{- end }}
