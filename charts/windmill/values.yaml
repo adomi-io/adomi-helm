@@ -1,0 +1,156 @@
+# Default values for the Windmill Helm chart (windmill-labs/windmill).
+#
+# Adomi platform contract: provision ("spin it up") and connect ("hook it up")
+# are separate and FULLY explicit.
+#   - provision: named lists (databases, sso) -> capability CRs (via platform-lib)
+#   - connect:   the workload reads ONLY env; wire DATABASE_URL in .Values.env,
+#                referencing the Secret the provision side delivered. It is applied
+#                to BOTH the server and the worker (both need the database).
+#
+# Windmill is stateless (all state lives in Postgres) and runs as two roles from
+# one image: a server (MODE=server, serves the API/UI) and one or more workers
+# (MODE=worker, execute jobs). SSO (OSS) is configured at runtime in the superadmin
+# UI — the SSOApplication just pre-provisions the Authentik app + credentials.
+
+image:
+  repository: ghcr.io/windmill-labs/windmill
+  # Defaults to the chart's appVersion (a pinned, immutable Windmill release).
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Identity stamped onto the capability CRs this chart emits (the Database
+# reconciler requires platform.adomi.io/client). Filled by the controller.
+platform:
+  client: ""
+
+# --- PROVISION (spin it up) -------------------------------------------------
+# databases: each entry emits a Database CR; the controller provisions it and
+# delivers the connection (url/host/user/dbname/password) to the named Secret.
+databases: []
+  # Name the entry after the app (NOT a generic "main"): the Database CR is named
+  # from this and lands in the shared workload namespace, so a generic name collides
+  # with other apps' databases. Keep it app-unique.
+  # - name: windmill
+  #   server: acme-prod-db
+  #   databaseName: windmill
+  #   user: windmill
+  #   credentials:
+  #     secret: windmill-db
+
+# sso: each entry emits an SSOApplication CR; the controller registers the app in
+# Authentik and delivers credentials to the named Secret. Windmill OSS wires OAuth
+# at runtime (superadmin UI -> Instance Settings -> SSO/OAuth) using those creds.
+sso: []
+  # - name: web
+  #   protocol: oauth2
+  #   redirectUris:
+  #     - https://windmill.example.com/user/login_callback/authentik
+  #   credentials:
+  #     secret: windmill-sso
+
+# --- CONNECT (hook it up) ---------------------------------------------------
+# Explicit env for BOTH server and worker. Wire DATABASE_URL from the provisioned
+# Secret's `url` key. Nothing is inferred.
+env: []
+  # - name: DATABASE_URL
+  #   valueFrom:
+  #     secretKeyRef: { name: windmill-db, key: url }
+
+extraEnvFrom: []
+
+# Windmill application configuration (not connection wiring).
+windmill:
+  # Public base URL (BASE_URL). Auto-derived as https://<first ingress host> when
+  # empty. Windmill needs this correct for OAuth callbacks and webhooks.
+  baseUrl: ""
+  rustLog: info
+  server:
+    # Internal HTTP port the server listens on.
+    port: 8000
+  worker:
+    replicas: 1
+    # Worker group name (WORKER_GROUP). "default" runs all job kinds.
+    group: default
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  httpPort: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: windmill.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# Resources applied per role.
+serverResources: {}
+workerResources: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+# Server probes. Windmill serves the UI at / and validates the Host header, so the
+# probe sends Host: localhost (matching the upstream chart).
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+    httpHeaders:
+      - name: Host
+        value: localhost
+  initialDelaySeconds: 20
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 6
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+    httpHeaders:
+      - name: Host
+        value: localhost
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+startupProbe:
+  httpGet:
+    path: /
+    port: http
+    httpHeaders:
+      - name: Host
+        value: localhost
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 60
+
+extraVolumes: []
+extraVolumeMounts: []

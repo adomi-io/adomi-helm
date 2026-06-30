@@ -1,0 +1,26 @@
+Thank you for installing {{ .Chart.Name }} ({{ include "windmill.image" . }}).
+
+Release name: {{ .Release.Name }}
+Namespace:    {{ .Release.Namespace }}
+
+1. Wait for the Windmill server and worker to become ready:
+
+   kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "windmill.fullname" . }}-server
+   kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "windmill.fullname" . }}-worker
+
+2. Reach Windmill:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "windmill.fullname" . }} 8000:{{ .Values.service.httpPort }}
+{{- end }}
+
+3. This chart is a pure consumer: DATABASE_URL is supplied explicitly via .Values.env
+   (wire it from the provisioned Secret's `url` key) and applied to BOTH the server
+   and the worker. The database is provisioned separately from .Values.databases.
+
+4. SSO (OSS): Windmill configures OAuth at runtime. The SSOApplication pre-provisions
+   the Authentik app + credentials Secret; add the provider in the Windmill superadmin
+   UI under Instance Settings -> SSO/OAuth using those client-id / client-secret values.

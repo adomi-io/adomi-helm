@@ -1,0 +1,25 @@
+apiVersion: v2
+name: windmill
+description: A Helm chart for deploying Windmill (a scripts/flows/apps automation platform) on the Adomi platform
+type: application
+# Chart version. Bump on every change to the chart itself.
+version: 0.1.0
+# Tracks the Windmill release shipped by the image (an immutable upstream tag).
+appVersion: "1.743.0"
+home: https://github.com/windmill-labs/windmill
+sources:
+  - https://github.com/windmill-labs/windmill
+maintainers:
+  - name: Adomi Software, LLC
+    email: github@adomisoftware.com
+keywords:
+  - windmill
+  - automation
+  - workflows
+  - scripts
+  - postgresql
+icon: https://raw.githubusercontent.com/windmill-labs/windmill/main/frontend/static/logo.svg
+dependencies:
+  - name: platform-lib
+    version: 0.1.0
+    repository: file://../platform-lib

@@ -28,7 +28,10 @@ platform:
 # databases: each entry emits a Database CR; the controller provisions it and
 # delivers the connection (url/host/user/dbname/password) to the named Secret.
 databases: []
-  # - name: main
+  # Name the entry after the app (NOT a generic "main"): the Database CR is named
+  # from this and lands in the shared workload namespace, so a generic name collides
+  # with other apps' databases. Keep it app-unique.
+  # - name: openwebui
   #   server: acme-prod-db
   #   databaseName: openwebui
   #   user: openwebui
