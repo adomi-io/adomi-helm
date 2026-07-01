@@ -1,0 +1,46 @@
+{{- /* Declarative Windmill instance config: the operator watches this ConfigMap (by
+       the app.kubernetes.io/name: windmill-operator label) and syncs global_settings
+       into the instance DB. Rendered only once the platform has injected the OIDC
+       descriptor (.Values.oidc.clientId). The client-SECRET is never placed here — the
+       operator resolves it from the Secret via secretKeyRef; only non-secret metadata
+       and the public client-id live in this ConfigMap. */}}
+{{- if .Values.oidc.clientId }}
+{{- $base := include "windmill.baseUrl" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-instance
+  # These labels match the upstream windmill-operator instance ConfigMap — the operator
+  # discovers the instance spec by the app.kubernetes.io/name: windmill-operator label,
+  # so keep it as the sole name label (do not merge the app's windmill labels here).
+  labels:
+    app.kubernetes.io/name: windmill-operator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ include "windmill.chart" . }}
+data:
+  spec: |
+    global_settings:
+      {{- if $base }}
+      base_url: {{ $base | quote }}
+      {{- end }}
+      # Authentik-driven login: auto-provision users on first SSO login.
+      require_preexisting_user_for_oauth: {{ not .Values.windmill.sso.autoCreateUsers }}
+      automate_username_creation: {{ .Values.windmill.sso.autoCreateUsers }}
+      oauths:
+        authentik:
+          id: {{ .Values.oidc.clientId | quote }}
+          secret:
+            secretKeyRef:
+              name: {{ .Values.oidc.secret | quote }}
+              key: {{ .Values.oidc.clientSecretKey | default "client-secret" | quote }}
+          login_config:
+            auth_url: {{ .Values.oidc.authorizationEndpoint | quote }}
+            token_url: {{ .Values.oidc.tokenEndpoint | quote }}
+            userinfo_url: {{ .Values.oidc.userinfoEndpoint | quote }}
+            scopes:
+              {{- range (splitList " " (.Values.oidc.scopes | default "openid email profile")) }}
+              - {{ . | quote }}
+              {{- end }}
+{{- end }}

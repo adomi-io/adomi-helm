@@ -1,0 +1,37 @@
+{{- /* The operator reads the instance ConfigMap and resolves secretKeyRef values from
+       Secrets, and emits events. Namespaced Role — least privilege in the app ns. */}}
+{{- if .Values.oidc.clientId }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "windmill.fullname" . }}-operator
+  labels:
+    {{- include "windmill.labels" . | nindent 4 }}
+    app.kubernetes.io/component: operator
+rules:
+  - apiGroups: [""]
+    resources: [configmaps, secrets]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, patch]
+  - apiGroups: [events.k8s.io]
+    resources: [events]
+    verbs: [create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "windmill.fullname" . }}-operator
+  labels:
+    {{- include "windmill.labels" . | nindent 4 }}
+    app.kubernetes.io/component: operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "windmill.fullname" . }}-operator
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "windmill.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

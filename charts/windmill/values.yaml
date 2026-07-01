@@ -74,6 +74,21 @@ env: []
 
 extraEnvFrom: []
 
+# --- CONNECT (SSO, declarative) ---------------------------------------------
+# The platform injects the resolved OIDC descriptor here (.Values.oidc) once the
+# SSOApplication has minted its client — issuer/endpoints (non-secret) + clientId +
+# the Secret name to secretKeyRef the client-secret. When present, the chart runs the
+# Windmill operator to sync the instance SSO config declaratively (no setup wizard,
+# Authentik-driven login). Empty by default (SSO not yet wired).
+oidc: {}
+  # clientId: ""
+  # secret: windmill-sso            # Secret holding client-secret (from OpenBao/ESO)
+  # clientSecretKey: client-secret
+  # authorizationEndpoint: ""
+  # tokenEndpoint: ""
+  # userinfoEndpoint: ""
+  # scopes: "openid email profile"
+
 # Windmill application configuration (not connection wiring).
 windmill:
   # Public base URL (BASE_URL). Auto-derived as https://<first ingress host> when
@@ -87,6 +102,17 @@ windmill:
     replicas: 1
     # Worker group name (WORKER_GROUP). "default" runs all job kinds.
     group: default
+  # SSO instance config, applied via the Windmill operator when .Values.oidc is set.
+  sso:
+    # Auto-provision users on their first Authentik login (no manual invite):
+    # require_preexisting_user_for_oauth=false + automate_username_creation=true.
+    # NOTE: Windmill OSS has no "superadmins" instance setting — the first user to
+    # log in becomes the superadmin; grant further admins in the Windmill UI.
+    autoCreateUsers: true
+  # The operator (the same Windmill image run as `windmill operator`) watches the
+  # instance ConfigMap and syncs it to the DB. Deployed only when .Values.oidc is set.
+  operator:
+    resources: {}
 
 serviceAccount:
   create: true
